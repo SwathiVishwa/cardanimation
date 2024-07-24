@@ -4,14 +4,11 @@ import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -23,7 +20,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.IntOffset
@@ -33,13 +29,11 @@ import com.app.cardsample.ui.theme.Pink
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
-
 @Composable
 fun CardView(card: Card, modifier: Modifier = Modifier) {
     Box(
         modifier = modifier
             .size(100.dp, 150.dp)
-//            .border(width = 1.dp, color = Color.Magenta)
     ) {
         Image(
             painter = painterResource(id = card.id),
@@ -60,6 +54,19 @@ fun ShuffleCards() {
     var shuffled by remember { mutableStateOf(false) }
     val animatedOffsets = remember { cards.map { Animatable(0f) } }
 
+    // Shuffle the cards and animate the positions
+    LaunchedEffect(shuffled) {
+        animationScope.launch {
+            animatedOffsets.forEachIndexed { index, animatable ->
+                val targetValue = if (shuffled) (index - 5) * 50f else 0f
+                animatable.animateTo(
+                    targetValue = targetValue,
+                    animationSpec = tween(durationMillis = 20)
+                )
+            }
+        }
+    }
+
     // Box to contain the card stack and shuffle button
     Box(
         modifier = Modifier
@@ -75,19 +82,8 @@ fun ShuffleCards() {
         // Shuffle button
         Button(
             onClick = {
-                animationScope.launch {
-                    shuffledCards = shuffleCards(cards)
-                    shuffled = !shuffled
-                    animatedOffsets.forEachIndexed { index, animatable ->
-                        val targetValue = if (shuffled) (index - 5) * 50f else 0f
-                        launch {
-                            animatable.animateTo(
-                                targetValue = targetValue,
-                                animationSpec = tween(durationMillis = 300)
-                            )
-                        }
-                    }
-                }
+                shuffledCards = shuffleCards(cards)
+                shuffled = !shuffled
             },
             modifier = Modifier.align(Alignment.BottomCenter)
         ) {
@@ -97,7 +93,6 @@ fun ShuffleCards() {
         // Cards stack
         Box(
             modifier = Modifier
-
                 .fillMaxSize()
                 .padding(bottom = 80.dp),
             contentAlignment = Alignment.Center
@@ -112,7 +107,4 @@ fun ShuffleCards() {
             }
         }
     }
-
-
 }
-

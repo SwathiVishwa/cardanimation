@@ -1,12 +1,14 @@
 package com.app.cardsample.card
 
+import android.graphics.Bitmap
+import android.graphics.drawable.BitmapDrawable
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Button
@@ -20,31 +22,37 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.graphics.nativeCanvas
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import coil.ImageLoader
+import coil.request.ImageRequest
+import coil.request.SuccessResult
 import com.app.cardsample.R
 import com.app.cardsample.ui.theme.Pink
 import kotlinx.coroutines.launch
-import kotlin.math.roundToInt
+import kotlin.math.cos
+import kotlin.math.sin
 
 @Composable
 fun CardView(card: Card, modifier: Modifier = Modifier) {
     Box(
         modifier = modifier
             .size(100.dp, 150.dp)
+
     ) {
         Image(
             painter = painterResource(id = card.id),
             contentDescription = null,
-            contentScale = ContentScale.FillBounds
         )
     }
 }
 
 @Composable
 fun ShuffleCards() {
+    val context = LocalContext.current
     val cards = remember { getCards() }
     var shuffledCards by remember { mutableStateOf(cards) }
 
@@ -66,6 +74,23 @@ fun ShuffleCards() {
             }
         }
     }
+    var image by remember { mutableStateOf<Bitmap?>(null) }
+    LaunchedEffect(R.drawable.clubs1) {
+        val loader = ImageLoader(context)
+        val request = ImageRequest.Builder(context)
+            .data(R.drawable.clubs1)
+            .build()
+
+        // Step 3: Execute the image request and get the result
+        val result = (loader.execute(request) as SuccessResult).drawable
+
+        // Step 4: Convert the drawable to a bitmap
+        image = (result as BitmapDrawable).bitmap
+    }
+
+    val radius = 200.dp
+    val angleStep = 180f / (shuffledCards.size - 1)
+    val density = LocalDensity.current.density
 
     // Box to contain the card stack and shuffle button
     Box(
@@ -97,14 +122,40 @@ fun ShuffleCards() {
                 .padding(bottom = 80.dp),
             contentAlignment = Alignment.Center
         ) {
-            shuffledCards.forEachIndexed { index, card ->
-                val offsetX = animatedOffsets[index].value
-                CardView(
-                    card,
-                    modifier = Modifier
-                        .offset { IntOffset(offsetX.roundToInt(), 0) }
-                )
+            Canvas(
+                modifier = Modifier
+                    .fillMaxSize()
+            ) {
+                val centerX = size.width / 2
+                val centerY = size.height / 2
+
+                shuffledCards.forEachIndexed { index, card ->
+                    val angle = 180f + angleStep * index
+                    val radian = Math.toRadians(angle.toDouble())
+                    val x = (centerX + radius.toPx() * cos(radian)).toFloat()
+                    val y = (centerY + radius.toPx() * sin(radian)).toFloat()
+
+
+                    drawContext.canvas.nativeCanvas.apply {
+                        save()
+                        rotate(angle, x, y)
+                        image?.let {
+                            drawBitmap(
+                                it,
+                                x - (image!!.width / 2),
+                                y - (image!!.height / 2),
+                                android.graphics.Paint().apply {
+                                    isAntiAlias = true
+                                }
+                            )
+                        }
+                        restore()
+                    }
+                }
             }
+
+
         }
     }
 }
+
